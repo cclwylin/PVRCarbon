@@ -73,3 +73,22 @@ REC_DIR=out/at30 AT_MS=30000 FRAMES=1 scripts/record_gfxbench.sh
 Replayed frames: [`docs/at30s/`](docs/at30s/)
 
 ![Each scene at 30 s, replayed in PVRCarbonPlayer](docs/at30s/grid.png)
+
+## Replay on the PvrGPU model
+
+With [PvrGPU](https://github.com/cclwylin/PvrGPU) set up (`script/setup_linux_env.sh`):
+
+```bash
+scripts/replay_on_pvrgpu.sh out/at30/gl_trex.pvrcbn   # -> out/pvrgpu/gl_trex/
+```
+
+PVRCarbonPlayer runs `--offscreen` on surfaceless EGL; GLVND is pointed at the PvrGPU
+Mesa build (`__EGL_VENDOR_LIBRARY_FILENAMES`) with `GALLIUM_DRIVER=pvrgpu`, and the
+SystemC bridge / output variables are set like PvrGPU's `rdc_runner`. Outputs: player
+readback PNGs, `driver-command.txt`, `driver-counter.txt`, `model.jsonl`, model PNG.
+
+T-Rex at 30 s, `fast` mode: 42 s wall, 40 model submissions, 8.63 ms simulated time,
+0 unsupported draws, 0 pool leaks; readback differs from llvmpipe in 0.42 % of pixels
+(> 16/255).
+
+![T-Rex at 30 s: llvmpipe vs PvrGPU](docs/pvrgpu_trex30_cmp.png)
