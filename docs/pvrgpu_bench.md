@@ -1,6 +1,51 @@
 # PvrGPU bench: GFXBench at 30 s
 
-## Single frame (comparable to a RenderDoc frame capture)
+## Single frame at 1920x1080 (comparable to PvrGPU's RenderDoc captures)
+
+The same single-frame method as the 640x360 table below, recorded at the
+resolution of the RenderDoc captures in PvrGPU's `docs/LINUX_GFXBENCH.md`
+(`3.GFXBench_1Frames`, 1920x1080 Offscreen):
+
+```bash
+WIDTH=1920 HEIGHT=1080 AT_MS=30000 REC_DIR=out/at30x3-1080 FRAMES=2 scripts/record_gfxbench.sh
+# PVRCarbonTrim --frame-range=2-2 per test (Manhattan 3.0: frame 1-1 of a FRAMES=1 recording);
+# Trim replays the recording, so it needs a display (xvfb-run).
+REC_DIR=out/at30f-1080 BENCH_DIR=out/pvrgpu-bench-f-1080 REF_DIR=out/at30f-1080/ref scripts/bench_pvrgpu.sh
+```
+
+| mode | test | wall (s) | sim time (ms) | submissions | IA prims | PS invocations | peak RSS (GB) | player errors | unsupported | pool leaks | px diff vs llvmpipe (%) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| fast | gl_5_high | 1038 | 75.07 | 37 | 176616 | 40143377 | 2.69 | 0 | 0 | 0 | 0.00 |
+| fast | gl_5_normal | 745 | 58.52 | 32 | 146928 | 32451243 | 1.80 | 0 | 0 | 0 | 0.01 |
+| fast | gl_manhattan | 340 | 21.77 | 164 | 564978 | 13294759 | 3.46 | 0 | 7 | 0 | 0.03 |
+| fast | gl_manhattan31 | 469 | 30.82 | 68 | 316031 | 17591309 | 4.05 | 0 | 0 | 0 | 0.00 |
+| fast | gl_trex | 166 | 7.42 | 36 | 669415 | 7303470 | 1.04 | 0 | 0 | 0 | 1.14 |
+| sim | gl_5_high | 3117 | 92.85 | 37 | 176616 | 40143377 | 3.09 | 0 | 0 | 0 | 0.00 |
+| sim | gl_5_normal | 2168 | 72.30 | 32 | 146928 | 32451243 | 2.43 | 0 | 0 | 0 | 0.01 |
+| sim | gl_manhattan | 693 | 27.87 | 164 | 564978 | 13294759 | 3.72 | 0 | 7 | 0 | 0.03 |
+| sim | gl_manhattan31 | 946 | 36.77 | 68 | 316031 | 17591309 | 4.21 | 0 | 0 | 0 | 0.00 |
+| sim | gl_trex | 249 | 11.25 | 36 | 669415 | 7303470 | 1.14 | 0 | 0 | 0 | 1.14 |
+
+Against the RenderDoc captures (PvrGPU `docs/LINUX_GFXBENCH.md`, model `efab019`;
+the captures are not necessarily the frame at 30 s):
+
+| scene | fast: PVRCarbon / RenderDoc | sim: PVRCarbon / RenderDoc |
+|---|---|---|
+| Manhattan 3.0 | 21.77 / 16.75 ms (1.30) | 27.87 / 23.63 ms (1.18) |
+| Manhattan 3.1 | 30.82 / 24.77 ms (1.24) | 36.77 / 36.71 ms (1.00) |
+| Aztec Ruins Normal | 58.52 / 47.00 ms (1.25) | 72.30 / 71.34 ms (1.01) |
+| Aztec Ruins High | 75.07 / 71.90 ms (1.04) | 92.85 / 110.95 ms (0.84) |
+
+At 640x360 the same frames simulate in 4-7x less time (9.56 / 12.74 ms for
+Aztec Normal): the per-pixel work shrinks 9x, geometry and compute do not.
+The T-Rex differences at 1080p (1.14 % of pixels) are scattered single texels
+on foliage and ground detail, i.e. texture filtering, not missing geometry.
+
+![1080p frame at 30 s: llvmpipe vs PvrGPU sim](pvrgpu_1080p_cmp.jpg)
+
+Summary: [`pvrgpu_bench_1080p.json`](pvrgpu_bench_1080p.json).
+
+## Single frame at 640x360 (comparable to a RenderDoc frame capture)
 
 Only the frame at animation time 30 s is replayed. Resources that the
 application created or computed while loading are restored from a state
@@ -19,6 +64,7 @@ snapshot instead of being recomputed, as a RenderDoc capture does.
   and its frame 1 carries the 7,347 load-time compute dispatches. Its frame is
   black on PvrGPU anyway (ASTC cube map array, below).
 
+| mode | test | wall (s) | sim time (ms) | submissions | IA prims | PS invocations | peak RSS (GB) | player errors | unsupported | pool leaks | px diff vs llvmpipe (%) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | fast | gl_5_high | 173 | 11.63 | 37 | 176616 | 6099908 | 2.03 | 0 | 0 | 0 | 0.01 |
 | fast | gl_5_normal | 133 | 9.56 | 32 | 146928 | 5196967 | 1.08 | 0 | 0 | 0 | 0.02 |
