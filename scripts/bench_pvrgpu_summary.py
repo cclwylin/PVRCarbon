@@ -39,7 +39,11 @@ for run in sorted(p for p in bench.glob("*/*") if p.is_dir()):
     dc = (run / "driver-counter.txt")
     text = dc.read_text(errors="replace") if dc.exists() else ""
     row["unsupported_events"] = len(re.findall(r"event=\S*unsupported", text))
-    frame = run / "player-frames" / f"{test}_frame_1.png"
+    # The last captured frame is the one measured: frame 1 of a Loading +
+    # scene recording, frame 0 of a single-frame (trimmed) one.
+    frames = sorted((run / "player-frames").glob(f"{test}_frame_*.png"),
+                    key=lambda f: int(f.stem.rsplit("_", 1)[1]))
+    frame = frames[-1] if frames else run / "player-frames" / "missing.png"
     ref = ref_dir / f"{test}.png"
     if Image and frame.exists() and ref.exists():
         a, b = Image.open(ref).convert("RGB"), Image.open(frame).convert("RGB")

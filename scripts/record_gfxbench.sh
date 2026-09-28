@@ -6,6 +6,8 @@
 # Env: same as run_gfxbench.sh (FRAMES, STEP_MS, WIDTH, HEIGHT), plus
 #   REC_DIR         where .pvrcbn recordings go   (default ./out/recordings)
 #   PVRCARBON_DIR   PVRCarbon install dir          (default /opt/PVRCarbon)
+#   REC_FRAMES      record only these frames (PVRCARBON_frames, e.g. 2); the
+#                   recorder snapshots the GL state at the first one
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -31,7 +33,7 @@ for t in "${tests[@]}"; do
 PVRCARBON_host_library_egl=$libdir/libEGL.so.1 \
 PVRCARBON_host_library_glesv2=$libdir/libGLESv2.so.2 \
 LD_PRELOAD=$shim:$recorder/libEGL.so.1:$recorder/libGLESv2.so.2:$recorder/libPVRCarbon.so \
-PVRCARBON_filename=$REC_DIR/$t.pvrcbn" \
+PVRCARBON_filename=$REC_DIR/$t.pvrcbn${REC_FRAMES:+ PVRCARBON_frames=$REC_FRAMES}" \
   GFX=egl OUT_DIR="${OUT_DIR:-$REC_DIR/logs}" "$here/run_gfxbench.sh" "$t"
   if [ -f "$REC_DIR/$t.pvrcbn" ]; then
     echo "  -> $REC_DIR/$t.pvrcbn ($(du -h "$REC_DIR/$t.pvrcbn" | cut -f1))"

@@ -8,6 +8,7 @@
 #   REC_DIR   .pvrcbn recordings          (default out/at30)
 #   BENCH_DIR where results go            (default out/pvrgpu-bench)
 #   JOBS      replays run concurrently    (default 2; sim can take ~4 GB RSS each)
+#   REF_DIR   llvmpipe reference frames   (default docs/at30s)
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -27,9 +28,9 @@ for mode in $MODES; do
 done | xargs -P "$JOBS" -L 1 sh -c '
   mode=$0 t=$1 out="'"$BENCH_DIR"'/$mode/$t"
   mkdir -p "$(dirname "$out")"
-  PVRGPU_RUN_MODE=$mode CAPTURE_FRAMES=1 /usr/bin/time -f "%e %M" -o "$out.time" \
+  PVRGPU_RUN_MODE=$mode /usr/bin/time -f "%e %M" -o "$out.time" \
     "'"$here"'/replay_on_pvrgpu.sh" "'"$REC_DIR"'/$t.pvrcbn" "$out" >/dev/null 2>&1
   echo "$mode $t exit=$? $(cat "$out.time" 2>/dev/null | tail -1)"
 '
 
-python3 "$here/bench_pvrgpu_summary.py" "$BENCH_DIR" "$here/../docs/at30s"
+python3 "$here/bench_pvrgpu_summary.py" "$BENCH_DIR" "${REF_DIR:-$here/../docs/at30s}"
