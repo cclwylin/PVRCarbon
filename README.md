@@ -94,3 +94,24 @@ T-Rex at 30 s, `fast` mode: 42 s wall, 40 model submissions, 1.86 ms simulated t
 (> 16/255).
 
 ![T-Rex at 30 s: llvmpipe vs PvrGPU](docs/pvrgpu_trex30_cmp.png)
+
+## Standalone C++ export (PVRCarbonToCpp)
+
+```bash
+scripts/tocpp_frame.sh out/at30f/gl_trex.pvrcbn        # -> out/tocpp/gl_trex/build{,-headless}/bin/gl_trex
+EGL_PLATFORM=surfaceless PBUFFER=1 CAPTURE_PPM=frame.ppm out/tocpp/gl_trex/build-headless/bin/gl_trex
+```
+
+`PVRCarbonToCpp` turns the single-frame recording into a CMake project (the frame as
+plain EGL/GLES calls, shaders and one data blob) that builds and runs without
+PVRCarbon. The script adds two opt-in hooks to the generated frame: `PBUFFER=1`
+renders into a pbuffer of the recorded size (needed on surfaceless EGL such as the
+PvrGPU Mesa) and `CAPTURE_PPM` saves the frame before the swap. Run it on PvrGPU
+with the same environment as `scripts/replay_on_pvrgpu.sh`.
+
+| 30 s frame, PvrGPU `fast` | PVRCarbonPlayer | ToCpp program |
+|---|---|---|
+| T-Rex | 34 s, 36 submissions, 2.03 ms | 30 s, 36 submissions, 2.04 ms |
+| Aztec Ruins Normal | 133 s, 32 submissions, 9.56 ms | 127 s, 32 submissions, 9.56 ms |
+
+Frames match the player's within 0.03 % of pixels (> 16/255).
