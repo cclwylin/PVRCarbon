@@ -30,7 +30,30 @@ scripts/install_pvrcarbon.sh   # download (~1.9 GB) + install 2026_R2 to /opt/PV
 scripts/record_gfxbench.sh     # record each test -> out/recordings/<test>.pvrcbn
 ```
 
-The recorder's `libEGL`/`libGLESv2` are put first on `LD_LIBRARY_PATH` and forward
-to Mesa (`PVRCARBON_host_library_egl` / `_glesv2`). Inspect a recording with
+How GFXBench is hooked (the recorder only sees EGL/GLES):
+
+- `--gfx egl` instead of glfw, which would create a GLX context.
+- The recorder's `libEGL`/`libGLESv2`/`libPVRCarbon` are on `LD_LIBRARY_PATH` **and**
+  `LD_PRELOAD`, since `testfw_app` links GLVND `libGL.so.1` directly; they forward to
+  Mesa (`PVRCARBON_host_library_egl` / `_glesv2`).
+- `scripts/glx_to_carbon.c` (built and preloaded by the script) makes GLEW's
+  `glXGetProcAddress` lookups return the recorder's `gl*` functions; without it shaders,
+  buffers and compressed textures are missing from the recording.
+
+Result with the defaults (10 frames, 640x360); every recording replays in
+`PVRCarbonPlayer` with 0 errors and renders the right scene:
+
+| test id          | `.pvrcbn` |
+|------------------|-----------|
+| `gl_trex`        | 24 MB     |
+| `gl_manhattan`   | 58 MB     |
+| `gl_manhattan31` | 60 MB     |
+| `gl_4`           | 97 MB     |
+| `gl_5_normal`    | 108 MB    |
+| `gl_5_high`      | 363 MB    |
+
+Inspect a recording with
 `/opt/PVRCarbon/CLI/Linux_x86_64/PVRCarbonDump` or `PVRCarbonToTxt`, replay it with
 `/opt/PVRCarbon/Player/Linux_x86_64/PVRCarbonPlayer`.
+
+![Frame 10 of each recording, replayed in PVRCarbonPlayer](docs/replay_frames.png)

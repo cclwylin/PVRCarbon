@@ -10,6 +10,7 @@
 #   WIDTH/HEIGHT                                  (default 640x360)
 #   OUT_DIR     where logs/results go            (default ./out/runs)
 #   WRAPPER     command prefix used to launch testfw_app, e.g. a capture tool
+#   GFX         window/context backend: glfw (GLX) or egl   (default glfw)
 set -euo pipefail
 
 GFXBENCH_DIR="${GFXBENCH_DIR:-/home/user/kishonti-opensource/gfxbench}"
@@ -19,6 +20,7 @@ WIDTH="${WIDTH:-640}"
 HEIGHT="${HEIGHT:-360}"
 OUT_DIR="$(realpath -m "${OUT_DIR:-out/runs}")"
 WRAPPER="${WRAPPER:-}"
+GFX="${GFX:-glfw}"
 
 # T-Rex, Manhattan 3.0, Manhattan 3.1, Car Chase, Aztec Ruins (normal / high)
 tests=("$@")
@@ -36,7 +38,7 @@ for t in "${tests[@]}"; do
   log="$OUT_DIR/$t.log"
   start=$(date +%s)
   # shellcheck disable=SC2086
-  $WRAPPER ./bin/testfw_app -b . --gfx glfw --gl_api gles -w "$WIDTH" -h "$HEIGHT" -t "$t" \
+  $WRAPPER ./bin/testfw_app -b . --gfx "$GFX" --gl_api gles -w "$WIDTH" -h "$HEIGHT" -t "$t" \
     --ei -max_rendered_frames="$FRAMES" --ei -frame_step_time="$STEP_MS" >"$log" 2>&1 || true
   status=$(grep -m1 '"status"' "$log" | tr -d ' ",' | cut -d: -f2)
   echo "$t: status=${status:-FAILED} time=$(( $(date +%s) - start ))s log=$log"

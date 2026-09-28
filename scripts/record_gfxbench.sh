@@ -18,14 +18,21 @@ tests=("$@")
 [ ${#tests[@]} -eq 0 ] && tests=(gl_trex gl_manhattan gl_manhattan31 gl_4 gl_5_normal gl_5_high)
 
 mkdir -p "$REC_DIR"
+shim="$REC_DIR/glx_to_carbon.so"
+cc -shared -fPIC -O2 -o "$shim" "$here/glx_to_carbon.c" -ldl
+
 for t in "${tests[@]}"; do
   rm -f "$REC_DIR/$t.pvrcbn"
-  # PVRCarbon's libEGL/libGLESv2 shadow Mesa's via LD_LIBRARY_PATH and forward to the host libs.
+  # The recorder hooks EGL/GLES only, so use --gfx egl (glfw would create a GLX context).
+  # PVRCarbon's libEGL/libGLESv2 shadow Mesa's and forward to the host libs. They are also
+  # preloaded because testfw_app links libGL (GLVND) directly, and glx_to_carbon.so routes
+  # GLEW's glXGetProcAddress lookups to the recorder.
   WRAPPER="env LD_LIBRARY_PATH=$recorder${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
 PVRCARBON_host_library_egl=$libdir/libEGL.so.1 \
 PVRCARBON_host_library_glesv2=$libdir/libGLESv2.so.2 \
+LD_PRELOAD=$shim:$recorder/libEGL.so.1:$recorder/libGLESv2.so.2:$recorder/libPVRCarbon.so \
 PVRCARBON_filename=$REC_DIR/$t.pvrcbn" \
-  OUT_DIR="${OUT_DIR:-$REC_DIR/logs}" "$here/run_gfxbench.sh" "$t"
+  GFX=egl OUT_DIR="${OUT_DIR:-$REC_DIR/logs}" "$here/run_gfxbench.sh" "$t"
   if [ -f "$REC_DIR/$t.pvrcbn" ]; then
     echo "  -> $REC_DIR/$t.pvrcbn ($(du -h "$REC_DIR/$t.pvrcbn" | cut -f1))"
   else
