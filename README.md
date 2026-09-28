@@ -87,6 +87,8 @@ Mesa build (`__EGL_VENDOR_LIBRARY_FILENAMES`) with `GALLIUM_DRIVER=pvrgpu`, and 
 SystemC bridge / output variables are set like PvrGPU's `rdc_runner`. Outputs: player
 readback PNGs, `driver-command.txt`, `driver-counter.txt`, `model.jsonl`, model PNG.
 
+Full fast/sim results for all six scenes: [docs/pvrgpu_bench.md](docs/pvrgpu_bench.md).
+
 T-Rex at 30 s, `fast` mode: 42 s wall, 40 model submissions, 1.86 ms simulated time,
 0 unsupported draws, 0 pool leaks; readback differs from llvmpipe in 0.42 % of pixels
 (> 16/255).
