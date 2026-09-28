@@ -31,6 +31,31 @@ static fn_t via_recorder(const unsigned char *name)
     return egl_gpa ? egl_gpa(n) : 0;
 }
 
+// GFXBench enables desktop GL's GL_TEXTURE_CUBE_MAP_SEAMLESS, which GLES does
+// not have (its cube maps are always seamless; the call is GL_INVALID_ENUM).
+// PVRCarbonTrim segfaults snapshotting that state, so it never reaches the
+// recorder. The shim is preloaded first, so both direct calls and the lookups
+// above land here.
+#define GL_TEXTURE_CUBE_MAP_SEAMLESS 0x884F
+
+void glEnable(unsigned int cap)
+{
+    static void (*next)(unsigned int);
+    if (!next)
+        next = (void (*)(unsigned int))dlsym(RTLD_NEXT, "glEnable");
+    if (cap != GL_TEXTURE_CUBE_MAP_SEAMLESS && next)
+        next(cap);
+}
+
+void glDisable(unsigned int cap)
+{
+    static void (*next)(unsigned int);
+    if (!next)
+        next = (void (*)(unsigned int))dlsym(RTLD_NEXT, "glDisable");
+    if (cap != GL_TEXTURE_CUBE_MAP_SEAMLESS && next)
+        next(cap);
+}
+
 fn_t glXGetProcAddressARB(const unsigned char *name)
 {
     fn_t p = via_recorder(name);
