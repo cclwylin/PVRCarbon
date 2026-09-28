@@ -45,6 +45,35 @@ on foliage and ground detail, i.e. texture filtering, not missing geometry.
 
 Summary: [`pvrgpu_bench_1080p.json`](pvrgpu_bench_1080p.json).
 
+### Car Chase, frame at 20 s
+
+GFXBench enables desktop GL's `GL_TEXTURE_CUBE_MAP_SEAMLESS` (an invalid enum in
+GLES, whose cube maps are always seamless), and `PVRCarbonTrim` segfaults
+snapshotting any state after it. `scripts/glx_to_carbon.c` now drops that call,
+so the frame after loading trims; it replays on llvmpipe pixel-identical to the
+same frame of the full recording (7 dispatches, 157 draws). Its reflections
+sample ASTC 5x5 sRGB cube map arrays, which needs PvrGPU's ASTC cube-array
+support (`claude/pco-ra-spilling`, cdef6a6 and 0363923).
+
+```bash
+WIDTH=1920 HEIGHT=1080 AT_MS=20000 REC_DIR=out/at20x3-1080 FRAMES=2 scripts/record_gfxbench.sh gl_4
+xvfb-run -a PVRCarbonTrim --frame-range=2-2 -o=out/at20f-1080/gl_4 out/at20x3-1080/gl_4.pvrcbn
+```
+
+| mode | wall (s) | sim time (ms) | submissions | IA prims | PS invocations | peak RSS (GB) | unsupported | px diff vs llvmpipe (%) |
+|---|---|---|---|---|---|---|---|---|
+| fast | 565 | 60.23 | 54 | 151442 | 28943110 | 1.90 | 0 | 0.28 |
+| sim | 1036 | 48.04 | 54 | 151442 | 28943110 | 2.13 | 0 | 0.28 |
+
+Unlike every other scene, `sim` is faster than `fast` here. The frame issues
+160 M texel fetches (tessellated terrain and ASTC reflections); `fast` has no
+caches, so each fetch crosses the fabric, and fabric contention alone is
+170 M cycles in the heaviest submission (13 M in `sim`, where the MCU hits
+99 % of lines). The RenderDoc capture of Car Chase measured 59.93 ms fast and
+86.98 ms sim, but it is not known to be the same frame.
+
+![Car Chase at 20 s: llvmpipe vs PvrGPU sim](pvrgpu_carchase20_cmp.jpg)
+
 ## Single frame at 640x360 (comparable to a RenderDoc frame capture)
 
 Only the frame at animation time 30 s is replayed. Resources that the
