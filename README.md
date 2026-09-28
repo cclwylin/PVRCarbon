@@ -25,7 +25,12 @@ vars `FRAMES`, `STEP_MS`, `WIDTH`, `HEIGHT`, `OUT_DIR`, `WRAPPER`.
 
 ## PVRCarbon
 
-Not installed yet: the PVRCarbon Linux package has to be downloaded from
-developer.imaginationtech.com (blocked by this environment's network policy)
-or committed to this repo. Once available, launch GFXBench through it via
-`WRAPPER`.
+```bash
+scripts/install_pvrcarbon.sh   # download (~1.9 GB) + install 2026_R2 to /opt/PVRCarbon (accepts the EULA)
+scripts/record_gfxbench.sh     # record each test -> out/recordings/<test>.pvrcbn
+```
+
+The recorder's `libEGL`/`libGLESv2` are put first on `LD_LIBRARY_PATH` and forward
+to Mesa (`PVRCARBON_host_library_egl` / `_glesv2`). Inspect a recording with
+`/opt/PVRCarbon/CLI/Linux_x86_64/PVRCarbonDump` or `PVRCarbonToTxt`, replay it with
+`/opt/PVRCarbon/Player/Linux_x86_64/PVRCarbonPlayer`.

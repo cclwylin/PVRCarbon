@@ -18,7 +18,7 @@ if ! pgrep -x Xvfb >/dev/null; then
 fi
 
 echo "== EGL / GLES =="
-eglinfo -B 2>/dev/null | grep -E "OpenGL ES profile (renderer|version)" | head -2
+eglinfo -B 2>/dev/null | grep -E "OpenGL ES profile (renderer|version)" | head -2 || true
 echo "== Vulkan =="
-vulkaninfo --summary 2>/dev/null | grep -E "deviceName|apiVersion" | head -2
+vulkaninfo --summary 2>/dev/null | grep -E "deviceName|apiVersion" | head -2 || true
 echo "DISPLAY=$DISPLAY"
