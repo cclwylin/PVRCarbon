@@ -4,6 +4,11 @@
 # pvrgpu backend of PvrGPU's rdc_runner (src/rdc_runner/main.cpp).
 #
 #   scripts/replay_on_pvrgpu.sh <recording.pvrcbn> [outdir]
+#   scripts/replay_on_pvrgpu.sh <tocpp program> [outdir]
+#
+# A program built by scripts/tocpp_frame.sh (build-headless/) runs in the same
+# environment with PBUFFER=1, CAPTURE_PPM=<outdir>/frame.ppm and
+# MARK_OUT=<outdir>/marks.txt (set MARK_FRAME to mark frames).
 #
 # Env:
 #   PVRGPU_ENV_ROOT   PvrGPU setup root (script/setup_linux_env.sh)
@@ -14,6 +19,13 @@ set -euo pipefail
 
 rec="$(realpath "$1")"
 out="$(realpath -m "${2:-out/pvrgpu/$(basename "$rec" .pvrcbn)}")"
+if [[ "$rec" == *.pvrcbn ]]; then
+  capture=(--capture-frames${CAPTURE_FRAMES:+=$CAPTURE_FRAMES})
+  run=("${PVRCARBON_DIR:-/opt/PVRCarbon}/Player/Linux_x86_64/PVRCarbonPlayer" --offscreen
+       "${capture[@]}" --capture-frames-path="$out/player-frames" "$rec")
+else
+  run=(env PBUFFER=1 CAPTURE_PPM="$out/frame.ppm" MARK_OUT="$out/marks.txt" "$rec")
+fi
 PVRGPU_ENV_ROOT="${PVRGPU_ENV_ROOT:-$HOME/Downloads/_Codex/Working/PvrGPU}"
 PVRCARBON_DIR="${PVRCARBON_DIR:-/opt/PVRCarbon}"
 # shellcheck disable=SC1091
@@ -22,7 +34,6 @@ mesa="$PVRGPU_MESA_PVRGPU_PREFIX"
 
 rm -rf "$out"
 mkdir -p "$out"/{model,player-frames,tmp,xdg-cache}
-capture=(--capture-frames${CAPTURE_FRAMES:+=$CAPTURE_FRAMES})
 
 start=$(date +%s)
 set +e
@@ -41,9 +52,7 @@ env -u DISPLAY \
   PVRGPU_SYSTEMC_JSONL_OUT="$out/model.jsonl" \
   PVRGPU_SYSTEMC_STDERR_OUT="$out/model.stderr" \
   PVRGPU_SYSTEMC_OUTDIR="$out/model" \
-  "$PVRCARBON_DIR/Player/Linux_x86_64/PVRCarbonPlayer" --offscreen \
-    "${capture[@]}" --capture-frames-path="$out/player-frames" "$rec" \
-  >"$out/player.log" 2>&1
+  "${run[@]}" >"$out/player.log" 2>&1
 rc=$?
 set -e
 
