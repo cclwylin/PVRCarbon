@@ -10,6 +10,7 @@
 #   WIDTH/HEIGHT                                  (default 640x360)
 #   OUT_DIR     where logs/results go            (default ./out/runs)
 #   WRAPPER     command prefix used to launch testfw_app, e.g. a capture tool
+#   AT_MS       render the fixed animation time AT_MS instead of stepping (single_frame)
 #   GFX         window/context backend: glfw (GLX) or egl   (default glfw)
 set -euo pipefail
 
@@ -21,6 +22,7 @@ HEIGHT="${HEIGHT:-360}"
 OUT_DIR="$(realpath -m "${OUT_DIR:-out/runs}")"
 WRAPPER="${WRAPPER:-}"
 GFX="${GFX:-glfw}"
+AT_MS="${AT_MS:-}"
 
 # T-Rex, Manhattan 3.0, Manhattan 3.1, Car Chase, Aztec Ruins (normal / high)
 tests=("$@")
@@ -32,6 +34,9 @@ if ! pgrep -x Xvfb >/dev/null; then
   sleep 2
 fi
 
+time_args=(--ei -frame_step_time="$STEP_MS")
+[ -n "$AT_MS" ] && time_args=(--ei -single_frame="$AT_MS")
+
 mkdir -p "$OUT_DIR"
 cd "$GFXBENCH_DIR/tfw-pkg"
 for t in "${tests[@]}"; do
@@ -39,7 +44,7 @@ for t in "${tests[@]}"; do
   start=$(date +%s)
   # shellcheck disable=SC2086
   $WRAPPER ./bin/testfw_app -b . --gfx "$GFX" --gl_api gles -w "$WIDTH" -h "$HEIGHT" -t "$t" \
-    --ei -max_rendered_frames="$FRAMES" --ei -frame_step_time="$STEP_MS" >"$log" 2>&1 || true
+    --ei -max_rendered_frames="$FRAMES" "${time_args[@]}" >"$log" 2>&1 || true
   status=$(grep -m1 '"status"' "$log" | tr -d ' ",' | cut -d: -f2)
   echo "$t: status=${status:-FAILED} time=$(( $(date +%s) - start ))s log=$log"
 done

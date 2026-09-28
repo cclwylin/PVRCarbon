@@ -57,3 +57,19 @@ Inspect a recording with
 `/opt/PVRCarbon/Player/Linux_x86_64/PVRCarbonPlayer`.
 
 ![Frame 10 of each recording, replayed in PVRCarbonPlayer](docs/replay_frames.png)
+
+### One sample at 30 s per scene
+
+`AT_MS` renders a fixed animation time (GFXBench `single_frame`) instead of stepping.
+Each recording then has 2 frames: frame 0 is the "Loading" screen, frame 1 is the scene at 30 s.
+
+```bash
+REC_DIR=out/at30 AT_MS=30000 FRAMES=1 scripts/record_gfxbench.sh
+# replay + save frame 1 as PNG
+/opt/PVRCarbon/Player/Linux_x86_64/PVRCarbonPlayer --capture-frames=1 \
+  --capture-frames-path=out/at30/shots out/at30/gl_trex.pvrcbn
+```
+
+Replayed frames: [`docs/at30s/`](docs/at30s/)
+
+![Each scene at 30 s, replayed in PVRCarbonPlayer](docs/at30s/grid.png)
