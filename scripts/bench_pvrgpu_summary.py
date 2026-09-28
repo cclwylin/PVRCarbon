@@ -30,7 +30,9 @@ for run in sorted(p for p in bench.glob("*/*") if p.is_dir()):
     counter = [c for c in counters if c.get("type") == "counter"]
     done = [c for c in counters if c.get("type") == "done"]
     row["submissions"] = len(counter)
-    row["sim_ms"] = sum(c.get("virtual_time_ns", 0) for c in counter) / 1e6
+    # virtual_time_ns is the model's cumulative simulated time at each
+    # submission, so the run's total is the last (largest) value.
+    row["sim_ms"] = max((c.get("virtual_time_ns", 0) for c in counter), default=0) / 1e6
     row["pool_leaks"] = sum(d.get("pool_leaks", 0) for d in done)
     for k in ("ia_primitives", "setup_triangles", "ps_invocations"):
         row[k] = sum((c.get("counters") or {}).get(k, 0) for c in counter)
