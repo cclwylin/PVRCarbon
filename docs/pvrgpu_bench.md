@@ -1,5 +1,42 @@
 # PvrGPU bench: GFXBench at 30 s
 
+## Single frame (comparable to a RenderDoc frame capture)
+
+Only the frame at animation time 30 s is replayed. Resources that the
+application created or computed while loading are restored from a state
+snapshot instead of being recomputed, as a RenderDoc capture does.
+
+- Recordings: `REC_DIR=out/at30x3 AT_MS=30000 FRAMES=2 scripts/record_gfxbench.sh`
+  (Loading + two frames at 30 s), then `PVRCarbonTrim --frame-range=2-2`.
+  Each trimmed recording replays on llvmpipe pixel-identical to frame 2 of the
+  full recording; those replays are the references (`docs/at30f/`).
+- Manhattan 3.0: `PVRCarbonTrim` segfaults at the frame-2 snapshot, so it uses
+  frame 1 of the two-frame recording (`out/at30`): the same 365 draws as the
+  steady frame plus that frame's texture uploads and 21 `glGenerateMipmap`
+  calls (hence its 7 declined 3D mip blits and more submissions).
+- Car Chase is not included: `PVRCarbonTrim` segfaults at the frame-2
+  snapshot, recording only frame 2 (`PVRCARBON_frames=2`) crashes GFXBench,
+  and its frame 1 carries the 7,347 load-time compute dispatches. Its frame is
+  black on PvrGPU anyway (ASTC cube map array, below).
+
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| fast | gl_5_high | 173 | 11.63 | 37 | 176616 | 6099908 | 2.03 | 0 | 0 | 0 | 0.01 |
+| fast | gl_5_normal | 133 | 9.56 | 32 | 146928 | 5196967 | 1.08 | 0 | 0 | 0 | 0.02 |
+| fast | gl_manhattan | 77 | 4.25 | 164 | 564978 | 1700459 | 3.26 | 0 | 7 | 0 | 0.03 |
+| fast | gl_manhattan31 | 80 | 4.55 | 68 | 316031 | 1968629 | 3.58 | 0 | 0 | 0 | 0.00 |
+| fast | gl_trex | 34 | 2.03 | 36 | 669415 | 1005295 | 0.95 | 0 | 0 | 0 | 0.11 |
+| sim | gl_5_high | 473 | 16.12 | 37 | 176616 | 6099908 | 2.20 | 0 | 0 | 0 | 0.01 |
+| sim | gl_5_normal | 318 | 12.74 | 32 | 146928 | 5196967 | 1.24 | 0 | 0 | 0 | 0.02 |
+| sim | gl_manhattan | 138 | 7.15 | 164 | 564978 | 1700459 | 3.34 | 0 | 7 | 0 | 0.03 |
+| sim | gl_manhattan31 | 137 | 7.08 | 68 | 316031 | 1968629 | 3.61 | 0 | 0 | 0 | 0.00 |
+| sim | gl_trex | 54 | 4.05 | 36 | 669415 | 1005295 | 0.97 | 0 | 0 | 0 | 0.11 |
+
+## Full recordings (Loading + frame at 30 s)
+
+The table below replays everything from application start, including all
+load-time work (Aztec's ~2,190 environment-probe compute dispatches, Car Chase's
+7,347 in its frame 1), so it is not comparable to a single-frame capture.
+
 `scripts/bench_pvrgpu.sh` over the 30 s PVRCarbon recordings (`out/at30`, frame 0
 "Loading" + frame 1 at 30 s), replayed with PVRCarbonPlayer on the PvrGPU Mesa
 build. PvrGPU branch `claude/pco-ra-spilling` @ 5ea050e. 4 vCPU, two replays at a time.
