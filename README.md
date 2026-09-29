@@ -117,3 +117,26 @@ with the same environment as `scripts/replay_on_pvrgpu.sh`.
 | Aztec Ruins Normal | 133 s, 32 submissions, 9.56 ms | 127 s, 32 submissions, 9.56 ms |
 
 Frames match the player's within 0.03 % of pixels (> 16/255).
+
+## dEQP recordings
+
+`deqp-gles3` from the VK-GL-CTS commit PvrGPU locks (`067e883`, built with
+`-DDEQP_TARGET=x11_egl -DDEQP_DISABLE_VK_VIDEO_TESTS=ON`), one recording per case:
+
+```bash
+deqp-gles3 --deqp-runmode=txt-caselist ...        # -> out/deqp/gles3-discovery.txt
+scripts/deqp_caselist.py out/deqp/gles3-discovery.txt > out/deqp/l1-shader.txt
+REC_DIR=out/deqp/l1-shader scripts/record_deqp.sh out/deqp/l1-shader.txt
+```
+
+`deqp_caselist.py` samples through PvrGPU's `script/deqp_4level_catalog.py`, so the
+list is exactly what `run_deqp_level.sh --1` runs; the default groups are the GLES3
+shader ones (9 texture functions + derivate, 10 built-in functions, 25 operator,
+26 matrix: 100 each). Cases run on llvmpipe with PvrGPU's dEQP defaults (256x256
+pbuffer, `rgba8888d24s8ms0`). dEQP's post-case state reset uses `glDisableiOES` and
+`glPrimitiveBoundingBoxEXT`, which PVRCarbonPlayer does not implement, so each
+recording is cut before the first of those when it follows the last draw.
+
+L1 shader result: 400 recordings (41 MB, 6 min), dEQP verdicts 399 Pass and 1
+QualityWarning (`builtin_functions.precision.acos.mediump_vertex.scalar`), and all
+400 replay in PVRCarbonPlayer with no errors.
