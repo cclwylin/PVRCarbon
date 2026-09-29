@@ -4,10 +4,11 @@
 # pvrgpu backend of PvrGPU's rdc_runner (src/rdc_runner/main.cpp).
 #
 #   scripts/replay_on_pvrgpu.sh <recording.pvrcbn> [outdir]
-#   scripts/replay_on_pvrgpu.sh <tocpp program> [outdir]
+#   scripts/replay_on_pvrgpu.sh <program> [outdir [program args...]]
 #
-# A program built by scripts/tocpp_frame.sh (build-headless/) runs in the same
-# environment with PBUFFER=1, CAPTURE_PPM=<outdir>/frame.ppm and
+# Any other program (e.g. a surfaceless dEQP binary, with its arguments after
+# outdir) runs in the same environment. One built by scripts/tocpp_frame.sh
+# (build-headless/) runs with PBUFFER=1, CAPTURE_PPM=<outdir>/frame.ppm and
 # MARK_OUT=<outdir>/marks.txt (set MARK_FRAME to mark frames).
 #
 # Env:
@@ -24,7 +25,7 @@ if [[ "$rec" == *.pvrcbn ]]; then
   run=("${PVRCARBON_DIR:-/opt/PVRCarbon}/Player/Linux_x86_64/PVRCarbonPlayer" --offscreen
        "${capture[@]}" --capture-frames-path="$out/player-frames" "$rec")
 else
-  run=(env PBUFFER=1 CAPTURE_PPM="$out/frame.ppm" MARK_OUT="$out/marks.txt" "$rec")
+  run=(env PBUFFER=1 CAPTURE_PPM="$out/frame.ppm" MARK_OUT="$out/marks.txt" "$rec" "${@:3}")
 fi
 PVRGPU_ENV_ROOT="${PVRGPU_ENV_ROOT:-$HOME/Downloads/_Codex/Working/PvrGPU}"
 PVRCARBON_DIR="${PVRCARBON_DIR:-/opt/PVRCarbon}"
