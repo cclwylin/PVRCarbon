@@ -13,7 +13,13 @@
 #   REC_DIR         output dir                     (default out/deqp)
 #   PVRCARBON_DIR   PVRCarbon install dir          (default /opt/PVRCarbon)
 #   TIMEOUT         seconds per case               (default 600)
+#   CAPS            pvrgpu (default): query PvrGPU's GLES limits once and let
+#                   dEQP see no more than those while recording, so it sizes
+#                   render targets and unit loops for the replay driver;
+#                   none: record with the host's own limits
 set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
 
 caselist="$(realpath "$1")"
 DEQP_BUILD="$(realpath "${DEQP_BUILD:-/home/user/deqp-build}")"
@@ -23,6 +29,16 @@ recorder="$PVRCARBON_DIR/Recorder/GLES/Linux_x86_64"
 libdir=/usr/lib/x86_64-linux-gnu
 
 mkdir -p "$REC_DIR"
+preload=""
+if [[ "${CAPS:-pvrgpu}" == pvrgpu ]]; then
+  cc -O2 -I"$here" -o "$REC_DIR/.gles_caps_query" "$here/gles_caps_query.c" -lEGL -lGLESv2
+  cc -shared -fPIC -O2 -o "$REC_DIR/.gles_caps_shim.so" "$here/gles_caps_shim.c" -ldl
+  "$here/replay_on_pvrgpu.sh" "$REC_DIR/.gles_caps_query" "$REC_DIR/.caps-query" >/dev/null 2>&1 || true
+  grep -E '^0x' "$REC_DIR/.caps-query/player.log" > "$REC_DIR/pvrgpu.caps"
+  rm -rf "$REC_DIR/.caps-query"
+  [[ -s "$REC_DIR/pvrgpu.caps" ]] || { echo "could not query PvrGPU's GLES limits" >&2; exit 1; }
+  preload="$REC_DIR/.gles_caps_shim.so:"
+fi
 display=":$((90 + RANDOM % 9))"
 Xvfb "$display" -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 &
 xvfb=$!
@@ -44,7 +60,8 @@ while read -r case; do
     LD_LIBRARY_PATH="$recorder${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
     PVRCARBON_host_library_egl="$libdir/libEGL.so.1" \
     PVRCARBON_host_library_glesv2="$libdir/libGLESv2.so.2" \
-    LD_PRELOAD="$recorder/libEGL.so.1:$recorder/libGLESv2.so.2:$recorder/libPVRCarbon.so" \
+    GLES_CAPS_FILE="$REC_DIR/pvrgpu.caps" \
+    LD_PRELOAD="$preload$recorder/libEGL.so.1:$recorder/libGLESv2.so.2:$recorder/libPVRCarbon.so" \
     PVRCARBON_filename="$rec" \
     timeout "${TIMEOUT:-600}" "./deqp-$module" \
       --deqp-case="$case" --deqp-archive-dir=. \
