@@ -44,7 +44,7 @@ plan = catalog.build_plan(
     discovery=discovery, shards=1, log_images="disable",
     default_config=catalog.DEFAULT_GL_CONFIG)
 for group_plan in plan.groups:
-    print(f"# group {group_plan.group.number} {group_plan.group.name}: "
+    print(f"# group {group_plan.group.number} {group_plan.group.label}: "
           f"{group_plan.selected} of {group_plan.discovered}", file=sys.stderr)
 for bucket in plan.buckets:
     if bucket.gl_config != catalog.DEFAULT_GL_CONFIG:

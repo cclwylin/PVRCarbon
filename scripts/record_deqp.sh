@@ -53,6 +53,27 @@ while read -r case; do
       --deqp-gl-config-name=rgba8888d24s8ms0 >"$REC_DIR/$case.log" 2>&1)
   rc=$?
   set -e
+  # dEQP resets GL state after each case with calls PVRCarbonPlayer does not
+  # implement (glDisableiOES, glPrimitiveBoundingBoxEXT). Cut the recording
+  # just before the first of them when that is after the case's last draw;
+  # otherwise keep it whole and say so in the log.
+  if [[ -s "$rec" ]]; then
+    txt="$REC_DIR/.calls.txt"
+    "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonToTxt" --export-uids=true -o="$txt" "$rec" >/dev/null 2>&1
+    cut_uid="$(grep -m1 -oE '^#[0-9]+ .*(glDisableiOES|glEnableiOES|glPrimitiveBoundingBoxEXT)\(' "$txt" \
+      | grep -oE '^#[0-9]+' | tr -d '#')"
+    last_draw="$(grep -E '^#[0-9]+ .*glDraw(Arrays|Elements|RangeElements)' "$txt" \
+      | tail -1 | grep -oE '^#[0-9]+' | tr -d '#')"
+    rm -f "$txt"
+    if [[ -n "$cut_uid" && ( -z "$last_draw" || "$cut_uid" -gt "$last_draw" ) ]]; then
+      (cd "$REC_DIR" && DISPLAY="$display" "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonTrim" \
+        --uid-range="0-$((cut_uid - 1))" -o="$case.cut" "$rec" >/dev/null 2>&1) &&
+        mv "$REC_DIR/$case.cut.pvrcbn" "$rec"
+      rm -rf "$REC_DIR/$case.cut"*
+    elif [[ -n "$cut_uid" ]]; then
+      echo "reset call at uid $cut_uid precedes the last draw ($last_draw); kept whole" >> "$REC_DIR/$case.log"
+    fi
+  fi
   verdict="$(grep -oE 'StatusCode="[A-Za-z]+"' "$qpa" 2>/dev/null | head -1 | cut -d'"' -f2)"
   bytes=$(stat -c %s "$rec" 2>/dev/null || echo 0)
   printf '%s\t%s\t%s\t%s\t%s\n' "$case" "${verdict:-none}" "$rc" \
