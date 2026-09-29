@@ -53,10 +53,13 @@ while read -r case; do
       --deqp-gl-config-name=rgba8888d24s8ms0 >"$REC_DIR/$case.log" 2>&1)
   rc=$?
   set -e
-  # dEQP resets GL state after each case with calls PVRCarbonPlayer does not
-  # implement (glDisableiOES, glPrimitiveBoundingBoxEXT). Cut the recording
-  # just before the first of them when that is after the case's last draw;
-  # otherwise keep it whole and say so in the log.
+  # After a case draws and reads back, dEQP resets all GL state: ~19k calls
+  # that walk every texture unit the host exposes (GL_INVALID_ENUM on a
+  # driver with fewer) and use calls PVRCarbonPlayer does not implement
+  # (glDisableiOES, glPrimitiveBoundingBoxEXT). Cut the recording after the
+  # last glReadPixels when it follows the last draw; failing that, before the
+  # first unimplemented call when that follows the last draw; otherwise keep
+  # it whole and say so in the log.
   if [[ -s "$rec" ]]; then
     txt="$REC_DIR/.calls.txt"
     "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonToTxt" --export-uids=true -o="$txt" "$rec" >/dev/null 2>&1
@@ -64,7 +67,12 @@ while read -r case; do
       | grep -oE '^#[0-9]+' | tr -d '#' || true)"
     last_draw="$(grep -E '^#[0-9]+ .*glDraw(Arrays|Elements|RangeElements)' "$txt" \
       | tail -1 | grep -oE '^#[0-9]+' | tr -d '#' || true)"
+    last_read="$(grep -E '^#[0-9]+ .*glReadPixels\(' "$txt" \
+      | tail -1 | grep -oE '^#[0-9]+' | tr -d '#' || true)"
     rm -f "$txt"
+    if [[ -n "$last_read" && -n "$last_draw" && "$last_read" -gt "$last_draw" ]]; then
+      cut_uid=$((last_read + 1))
+    fi
     if [[ -n "$cut_uid" && ( -z "$last_draw" || "$cut_uid" -gt "$last_draw" ) ]]; then
       (cd "$REC_DIR" && DISPLAY="$display" "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonTrim" \
         --uid-range="0-$((cut_uid - 1))" -o="$case.cut" "$rec" >/dev/null 2>&1) &&
