@@ -61,9 +61,9 @@ while read -r case; do
     txt="$REC_DIR/.calls.txt"
     "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonToTxt" --export-uids=true -o="$txt" "$rec" >/dev/null 2>&1
     cut_uid="$(grep -m1 -oE '^#[0-9]+ .*(glDisableiOES|glEnableiOES|glPrimitiveBoundingBoxEXT)\(' "$txt" \
-      | grep -oE '^#[0-9]+' | tr -d '#')"
+      | grep -oE '^#[0-9]+' | tr -d '#' || true)"
     last_draw="$(grep -E '^#[0-9]+ .*glDraw(Arrays|Elements|RangeElements)' "$txt" \
-      | tail -1 | grep -oE '^#[0-9]+' | tr -d '#')"
+      | tail -1 | grep -oE '^#[0-9]+' | tr -d '#' || true)"
     rm -f "$txt"
     if [[ -n "$cut_uid" && ( -z "$last_draw" || "$cut_uid" -gt "$last_draw" ) ]]; then
       (cd "$REC_DIR" && DISPLAY="$display" "$PVRCARBON_DIR/CLI/Linux_x86_64/PVRCarbonTrim" \
